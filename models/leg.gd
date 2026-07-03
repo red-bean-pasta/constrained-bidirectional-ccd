@@ -1,0 +1,29 @@
+extends Node3D
+class_name Leg
+
+
+@export var segments: Array[Segment]
+
+
+func _ready() -> void:
+	if segments.is_empty():
+		for c in get_children():
+			if c is Segment:
+				segments.append(c)
+	assert(segments.all(func(s): return s != null))
+	assert(_check_segment_ordered())
+	
+func _check_segment_ordered() -> bool:
+	var size := segments.size()
+	for i in range(1, size - 1):
+		var before := segments[i - 1]
+		var current := segments[i]
+		var after := segments[i + 1]
+		if (
+			current.index != before.index + 1
+			or current.index != after.index - 1
+			or current.antecedent != before.subsequent
+			or current.subsequent != after.antecedent
+		):
+			return false
+	return true
