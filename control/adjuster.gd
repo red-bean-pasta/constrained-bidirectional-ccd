@@ -2,22 +2,14 @@
 @tool
 class_name BiCcdAdjuster
 
-var _tolerance: float
 var _segments: Array[BiCcdSegment]
 
 ## Reusable placement to avoid allocations
 var _placements: AdjustablePlacements
 
-func _init(
-	p_tolerance: float,
-	p_segments: Array[BiCcdSegment],
-) -> void:
-	_tolerance = p_tolerance
+func _init(p_segments: Array[BiCcdSegment]) -> void:
 	_segments = p_segments
-	_placements = AdjustablePlacements.new(
-		_tolerance, 
-		_segments
-	)
+	_placements = AdjustablePlacements.new(_segments)
 
 
 ## This method does not perform iteration and convergence. It simply process one pass.
@@ -103,7 +95,6 @@ static func apply(
 
 
 class AdjustablePlacements:
-	var _tolerance: float
 	var _placements: BiCcdPlacements
 	
 	var _count: int:
@@ -117,11 +108,7 @@ class AdjustablePlacements:
 		get: return _placements.positions
 	
 	## [param p_basis_buffer]: Optional reusable basis buffer to avoid allocation. Micro-optiomization
-	func _init(
-		p_tolerance: float,
-		p_segments: Array[BiCcdSegment],
-	) -> void:
-		_tolerance = p_tolerance
+	func _init(p_segments: Array[BiCcdSegment]) -> void:
 		_placements = BiCcdPlacements.new(p_segments)
 	
 	func refresh() -> void:
@@ -132,6 +119,7 @@ class AdjustablePlacements:
 	## [param p_refresh]: Cautious: If false, process will happen on whatever was left since the last adjustment, which may not correctly reflect the current layout of segments
 	func adjust_to(
 		p_position: Vector3,
+		p_tolerance: float,
 		p_backward: bool,
 		p_joint_to_effector: bool = true,
 		p_refresh: bool = true,
@@ -140,17 +128,18 @@ class AdjustablePlacements:
 			refresh()
 		if p_backward: # To avoid the range()
 			for i in range(_count - 1, -1, -1):
-				if _adjust_and_check(i, p_position, p_joint_to_effector):
+				if _adjust_and_check(i, p_position, p_tolerance, p_joint_to_effector):
 					return true
 		else:
 			for i in _count:
-				if _adjust_and_check(i, p_position, p_joint_to_effector):
+				if _adjust_and_check(i, p_position, p_tolerance, p_joint_to_effector):
 					return true
 		return false
 	
 	func _adjust_and_check(
 		seg_idx: int, 
 		pos: Vector3,
+		tolerance: float,
 		joint_to_effector: bool
 	) -> bool:
 		var seg := _segments[seg_idx]
@@ -158,7 +147,7 @@ class AdjustablePlacements:
 			_adjust_joint_effector_to(seg, pos)
 		else:
 			_adjust_segment_to(seg, pos)
-		return _placements.check_reached(pos, _tolerance)
+		return _placements.check_reached(pos, tolerance)
 	
 	func _adjust_segment_to(
 		seg: BiCcdSegment, 

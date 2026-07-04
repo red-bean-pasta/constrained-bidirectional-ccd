@@ -2,17 +2,20 @@
 extends Node3D
 class_name BiCcdChain
 
-
 @export var segments: Array[BiCcdSegment]
 
+var adjuster: BiCcdAdjuster
 
 func _ready() -> void:
 	if segments.is_empty():
 		for c in get_children():
 			if c is BiCcdSegment:
 				segments.append(c)
+				
 	assert(segments.all(func(s): return s != null))
 	assert(_check_segment_ordered())
+	
+	adjuster = BiCcdAdjuster.new(segments)
 	
 func _check_segment_ordered() -> bool:
 	var size := segments.size()
