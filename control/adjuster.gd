@@ -1,15 +1,15 @@
 ## Note that flex happens before yaw, following the formula `yaw_rotation * flex_rotation * prev_basis`
-class_name Adjuster
+class_name BiCcdAdjuster
 
 var _tolerance: float
-var _segments: Array[Segment]
+var _segments: Array[BiCcdSegment]
 
 ## Reusable placement to avoid allocations
 var _placements: AdjustablePlacements
 
 func _init(
 	p_tolerance: float,
-	p_segments: Array[Segment],
+	p_segments: Array[BiCcdSegment],
 ) -> void:
 	_tolerance = p_tolerance
 	_segments = p_segments
@@ -24,8 +24,8 @@ func _init(
 ## [param out]: Optional argument to reuse reach result to reduce allocations
 func get_backward_adjust_step(
 	position: Vector3, 
-	output: ReachResult = null,
-) -> ReachResult:
+	output: BiCcdReachResult = null,
+) -> BiCcdReachResult:
 	var reached := _placements.adjust_to(position, true, true, true)
 	return _placement_to_result(reached, _placements, output)
 	
@@ -37,8 +37,8 @@ func get_backward_adjust_step(
 func get_forward_adjust_step(
 	position: Vector3, 
 	joint_to_effector: bool = true,
-	output: ReachResult = null,
-) -> ReachResult:
+	output: BiCcdReachResult = null,
+) -> BiCcdReachResult:
 	var reached := _placements.adjust_to(position, false, joint_to_effector, true)
 	return _placement_to_result(reached, _placements, output)
 
@@ -53,10 +53,10 @@ func get_full_adjust(
 	mode: int,
 	position: Vector3, 
 	max_attempts: int = 10,
-	output: ReachResult = null
-) -> ReachResult:
+	output: BiCcdReachResult = null
+) -> BiCcdReachResult:
 	assert(max_attempts > 0)
-	Utils.assert_range(mode, 0, 2)
+	BiCcdUtils.assert_range(mode, 0, 2)
 	
 	_placements.refresh()
 	
@@ -78,14 +78,14 @@ func get_full_adjust(
 static func _placement_to_result(
 	reached: bool,
 	placements: AdjustablePlacements,
-	output: ReachResult
-) -> ReachResult:
+	output: BiCcdReachResult
+) -> BiCcdReachResult:
 	if output:
 		output.reached = reached
 		output.bases = placements.bases
 		output.positions = placements.positions
 		return output
-	return ReachResult.new(
+	return BiCcdReachResult.new(
 		reached,
 		placements.bases,
 		placements.positions
@@ -94,20 +94,25 @@ static func _placement_to_result(
 
 class AdjustablePlacements:
 	var _tolerance: float
-	var _placements: SegmentPlacements
+	var _placements: BiCcdPlacements
 	
 	var _count: int:
 		get: return _placements.count
-	var _segments: Array[Segment]:
+	var _segments: Array[BiCcdSegment]:
 		get: return _placements._segments
+		
+	var bases: Array[Basis]:
+		get: return _placements.bases
+	var positions: Array[Vector3]:
+		get: return _placements.positions
 	
 	## [param p_basis_buffer]: Optional reusable basis buffer to avoid allocation. Micro-optiomization
 	func _init(
 		p_tolerance: float,
-		p_segments: Array[Segment],
+		p_segments: Array[BiCcdSegment],
 	) -> void:
 		_tolerance = p_tolerance
-		_placements = SegmentPlacements.new(p_segments)
+		_placements = BiCcdPlacements.new(p_segments)
 	
 	func refresh() -> void:
 		_placements.refresh()
@@ -146,19 +151,19 @@ class AdjustablePlacements:
 		return _placements.check_reached(pos, _tolerance)
 	
 	func _adjust_segment_to(
-		seg: Segment, 
+		seg: BiCcdSegment, 
 		pos: Vector3,
 	) -> void:
 		_adjust_seg_relative_to(seg, _placements._get_seg_end(seg), pos)
 
 	func _adjust_joint_effector_to(
-		seg: Segment, 
+		seg: BiCcdSegment, 
 		pos: Vector3,
 	) -> void:
 		_adjust_seg_relative_to(seg, _placements.end_position, pos)
 		
 	func _adjust_seg_relative_to(
-		seg: Segment, 
+		seg: BiCcdSegment, 
 		end_pos: Vector3,
 		target_pos: Vector3,
 	) -> void:

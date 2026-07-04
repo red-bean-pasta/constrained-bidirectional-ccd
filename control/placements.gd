@@ -1,7 +1,7 @@
-class_name SegmentPlacements
+class_name BiCcdPlacements
 
 
-var _segments: Array[Segment]
+var _segments: Array[BiCcdSegment]
 
 var _basis_buffer: Array[Basis] = []
 var _position_buffer: Array[Vector3] = []
@@ -21,7 +21,7 @@ var positions: Array[Vector3]:
 
 ## [param p_basis_buffer]: Optional reusable basis buffer to avoid allocation. Micro-optiomization
 func _init(
-	p_segments: Array[Segment]
+	p_segments: Array[BiCcdSegment]
 ) -> void:
 	_segments = p_segments
 	refresh()
@@ -42,8 +42,8 @@ func refresh() -> void:
 		_flex_buffer[i] = seg.current_flex_rad
 		_yaw_buffer[i] = seg.current_yaw_rad
 
-func rotate_seg_from_current(seg: Segment, flex_delta: float, yaw_delta: float) -> void:
-	if Utils.is_tau(flex_delta) and Utils.is_tau(yaw_delta):
+func rotate_seg_from_current(seg: BiCcdSegment, flex_delta: float, yaw_delta: float) -> void:
+	if BiCcdUtils.is_tau(flex_delta) and BiCcdUtils.is_tau(yaw_delta):
 		return
 		
 	var clamped_flex_delta := _clamp_flex_delta(seg, flex_delta)
@@ -63,7 +63,7 @@ func check_reached(pos: Vector3, tolerance: float) -> bool:
 	return end_position.distance_squared_to(pos) <= tolerance ** 2
 
 func _rotate_and_ripple(
-	seg: Segment, 
+	seg: BiCcdSegment, 
 	rotation: Basis
 ) -> void:
 	assert(seg.movable)
@@ -81,11 +81,11 @@ func _rotate_and_ripple(
 
 ## [returns]: May return NaN if the flex is unsolvable when `target_pos` or `end_pos` is just to the RIGHT of the joint
 func _solve_relative_flex_delta(
-	seg: Segment,
+	seg: BiCcdSegment,
 	end_pos: Vector3,
 	target_pos: Vector3,
 ) -> float:
-	return Helper.solve_flex_delta(
+	return BiCcdHelper.solve_flex_delta(
 		_get_seg_pos(seg),
 		end_pos,
 		target_pos,
@@ -94,12 +94,12 @@ func _solve_relative_flex_delta(
 
 ## [returns]: May return NaN if the flex is unsolvable when `target_pos` or `end_pos` is just to the UP of the joint
 func solve_relative_yaw_delta(
-	seg: Segment,
+	seg: BiCcdSegment,
 	end_pos: Vector3,
 	target_pos: Vector3,
 	flex_delta: float,
 ) -> float:
-	return Helper.solve_yaw_delta(
+	return BiCcdHelper.solve_yaw_delta(
 		_get_seg_pos(seg),
 		end_pos,
 		target_pos,
@@ -110,13 +110,13 @@ func solve_relative_yaw_delta(
 
 
 func solve_joint_effector_flex_delta(
-	seg: Segment,
+	seg: BiCcdSegment,
 	target_pos: Vector3,
 ) -> float:
 	return _solve_relative_flex_delta(seg, end_position, target_pos)
 
 func solve_joint_effector_yaw_delta(
-	seg: Segment,
+	seg: BiCcdSegment,
 	target_pos: Vector3,
 	flex_delta: float,
 ) -> float:
@@ -124,13 +124,13 @@ func solve_joint_effector_yaw_delta(
 
 
 func solve_segment_flex_delta(
-	seg: Segment,
+	seg: BiCcdSegment,
 	target_pos: Vector3,
 ) -> float:
 	return _solve_relative_flex_delta(seg, _get_seg_end(seg), target_pos)
 
 func solve_segment_yaw_delta(
-	seg: Segment,
+	seg: BiCcdSegment,
 	target_pos: Vector3,
 	flex_delta: float,
 ) -> float:
@@ -138,7 +138,7 @@ func solve_segment_yaw_delta(
 
 
 func _clamp_flex_delta(
-	seg: Segment,
+	seg: BiCcdSegment,
 	delta: float,
 ) -> float:
 	var i := seg.index
@@ -147,7 +147,7 @@ func _clamp_flex_delta(
 	return clamped - current
 
 func _clamp_yaw_delta(
-	seg: Segment,
+	seg: BiCcdSegment,
 	delta: float,
 ) -> float:
 	var i := seg.index
@@ -156,20 +156,20 @@ func _clamp_yaw_delta(
 	return clamped - current
 
 
-func _get_seg_basis(seg: Segment) -> Basis:
+func _get_seg_basis(seg: BiCcdSegment) -> Basis:
 	return _basis_buffer[seg.index + 1]
 	
-func _get_seg_prev_basis(seg: Segment) -> Basis:
+func _get_seg_prev_basis(seg: BiCcdSegment) -> Basis:
 	return _basis_buffer[seg.index]
 
-func _get_seg_pos(seg: Segment) -> Vector3:
+func _get_seg_pos(seg: BiCcdSegment) -> Vector3:
 	return _position_buffer[seg.index]
 
-func _get_seg_end(seg: Segment) -> Vector3:
+func _get_seg_end(seg: BiCcdSegment) -> Vector3:
 	return _position_buffer[seg.index + 1]
 
-func _get_seg_flex_axis(seg: Segment) -> Vector3:
+func _get_seg_flex_axis(seg: BiCcdSegment) -> Vector3:
 	return _get_seg_prev_basis(seg).y
 	
-func _get_seg_yaw_axis(seg: Segment) -> Vector3:
+func _get_seg_yaw_axis(seg: BiCcdSegment) -> Vector3:
 	return _get_seg_basis(seg).x

@@ -1,4 +1,4 @@
-class_name Helper
+class_name BiCcdHelper
 
 
 static func solve_rotation_to_direction(

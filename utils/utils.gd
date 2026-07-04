@@ -1,4 +1,4 @@
-class_name Utils
+class_name BiCcdUtils
 
 static func throw_not_implemented() -> void:
 	assert(false, "Not implemented")

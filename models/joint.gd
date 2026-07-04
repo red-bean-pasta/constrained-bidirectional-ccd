@@ -1,7 +1,7 @@
-class_name Joint
+class_name BiCcdJoint
 
-var flex: HingeLimits
-var yaw: HingeLimits
+var flex: BiCcdHingeLimits
+var yaw: BiCcdHingeLimits
 
 var flexible: bool:
 	get: return flex.rotatable
@@ -9,8 +9,8 @@ var yawable: bool:
 	get: return yaw.rotatable
 
 func _init(
-	flex_spec: HingeLimits,
-	yaw_spec: HingeLimits
+	flex_spec: BiCcdHingeLimits,
+	yaw_spec: BiCcdHingeLimits
 ) -> void:
 	flex = flex_spec
 	yaw = yaw_spec

@@ -1,5 +1,5 @@
 # To modify the inner arrays' items, copy the array first
-class_name ReachResult
+class_name BiCcdReachResult
 
 var reached: bool
 ## Size is 1 more than segments count, with the additional first basis as Vector3.FLIP_Z

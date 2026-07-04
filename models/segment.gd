@@ -1,5 +1,5 @@
 extends MeshInstance3D
-class_name Segment
+class_name BiCcdSegment
 
 
 signal transform_changed()
@@ -13,11 +13,11 @@ signal transform_changed()
 @export var _max_yaw_degree: float = 0.0
 ## Default to the average of min and max yaw degrees
 @export var _rest_yaw_degree: float = NAN
-var joint: Joint
+var joint: BiCcdJoint
 
 @export var index: int
-@export var antecedent: Segment
-@export var subsequent: Segment
+@export var antecedent: BiCcdSegment
+@export var subsequent: BiCcdSegment
 
 var flexible: bool:
 	get: return joint.flexible
@@ -50,24 +50,24 @@ func _ready() -> void:
 	_register_transform_notification()
 	
 	var rest_flex_degree := _rest_flex_degree if not is_nan(_rest_flex_degree) else (_min_flex_degree + _max_flex_degree) * 0.5
-	var flex_spec := HingeLimits.create_from_deg(
+	var flex_spec := BiCcdHingeLimits.create_from_deg(
 		_min_flex_degree,
 		_max_flex_degree,
 		rest_flex_degree,
 	)
 	var min_yaw_degree := _min_yaw_degree if not is_nan(_min_yaw_degree) else -_max_yaw_degree
 	var rest_yaw_degree := _rest_yaw_degree if not is_nan(_rest_yaw_degree) else (min_yaw_degree + _max_yaw_degree) * 0.5
-	var yaw_spec := HingeLimits.create_from_deg(
+	var yaw_spec := BiCcdHingeLimits.create_from_deg(
 		min_yaw_degree,
 		_max_yaw_degree,
 		rest_yaw_degree,
 	)
-	joint = Joint.new(flex_spec, yaw_spec)
+	joint = BiCcdJoint.new(flex_spec, yaw_spec)
 	
 	if not antecedent: 
-		antecedent = Utils.get_previous_sibling(self, Segment)
+		antecedent = BiCcdUtils.get_previous_sibling(self, BiCcdSegment)
 	if not subsequent:
-		subsequent = Utils.get_next_sibling(self, Segment)
+		subsequent = BiCcdUtils.get_next_sibling(self, BiCcdSegment)
 	if antecedent:
 		assert(antecedent.get_parent() == get_parent())
 		assert(antecedent.subsequent == self)
@@ -111,7 +111,7 @@ func _get_flex_rad() -> float:
 	var prev_up := prev_basis.y
 	var flex_axis := prev_basis.x
 	var rad := prev_up.signed_angle_to(current_up, flex_axis) + PI # Layout of ->-> actually correspond to the flex of PI instead of 0
-	return Utils.wrap_rad(rad, joint.flex.min_rad, joint.flex.max_rad)
+	return BiCcdUtils.wrap_rad(rad, joint.flex.min_rad, joint.flex.max_rad)
 
 func _get_yaw_rad() -> float:
 	if not joint.yawable:
@@ -125,7 +125,7 @@ func _get_yaw_rad() -> float:
 	var yaw_axis := zero_yaw_basis.y
 	
 	var rad := zero_yaw_forward.signed_angle_to(actual_forward, yaw_axis)
-	return Utils.wrap_rad(rad, joint.yaw.min_rad, joint.yaw.max_rad)
+	return BiCcdUtils.wrap_rad(rad, joint.yaw.min_rad, joint.yaw.max_rad)
 
 
 func yaw_by(rad: float) -> void:
