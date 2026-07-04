@@ -1,4 +1,5 @@
 # To modify the inner arrays' items, copy the array first
+@tool
 class_name BiCcdReachResult
 
 var reached: bool

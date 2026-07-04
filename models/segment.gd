@@ -1,3 +1,4 @@
+@tool
 extends MeshInstance3D
 class_name BiCcdSegment
 
@@ -68,6 +69,8 @@ func _ready() -> void:
 		antecedent = BiCcdUtils.get_previous_sibling(self, BiCcdSegment)
 	if not subsequent:
 		subsequent = BiCcdUtils.get_next_sibling(self, BiCcdSegment)
+	
+	await get_tree().process_frame # Wait for other segments to finish sibling finding
 	if antecedent:
 		assert(antecedent.get_parent() == get_parent())
 		assert(antecedent.subsequent == self)

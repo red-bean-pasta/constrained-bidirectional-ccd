@@ -1,4 +1,5 @@
 ## Note that flex happens before yaw, following the formula `yaw_rotation * flex_rotation * prev_basis`
+@tool
 class_name BiCcdAdjuster
 
 var _tolerance: float

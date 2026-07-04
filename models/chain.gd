@@ -1,3 +1,4 @@
+@tool
 extends Node3D
 class_name BiCcdChain
 
@@ -22,8 +23,10 @@ func _check_segment_ordered() -> bool:
 		if (
 			current.index != before.index + 1
 			or current.index != after.index - 1
-			or current.antecedent != before.subsequent
-			or current.subsequent != after.antecedent
+			or current.antecedent != before
+			or before.subsequent != current
+			or current.subsequent != after
+			or after.antecedent != current
 		):
 			return false
 	return true
