@@ -90,7 +90,16 @@ static func _placement_to_result(
 		placements.bases,
 		placements.positions
 	)
-	
+
+
+static func apply(
+	p_bases: Array[Basis],
+	p_segments: Array[BiCcdSegment],
+) -> void:
+	assert(p_bases.size() == p_segments.size() + 1)
+	for i in p_segments.size():
+		p_segments[i].basis = p_bases[i + 1]
+
 
 class AdjustablePlacements:
 	var _tolerance: float
