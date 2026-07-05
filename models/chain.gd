@@ -11,11 +11,10 @@ func _ready() -> void:
 		for c in get_children():
 			if c is BiCcdSegment:
 				segments.append(c)
-				
 	assert(segments.all(func(s): return s != null))
 	assert(_check_segment_ordered())
 	
-	adjuster = BiCcdAdjuster.new(segments)
+	adjuster = BiCcdAdjuster.new(self)
 	
 func _check_segment_ordered() -> bool:
 	var size := segments.size()

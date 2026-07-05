@@ -1,37 +1,62 @@
-## Note that flex happens before yaw, following the formula `yaw_rotation * flex_rotation * prev_basis`
+## Note that flex happens before yaw, following the formula [code]yaw_rotation * flex_rotation * prev_basis[/code].
+## Note that returned [BiCcdReachResult] is cached and reused. Callers should clone it if storage is needed.
 @tool
 class_name BiCcdAdjuster
 
-var _segments: Array[BiCcdSegment]
+var _chain: BiCcdChain
+var _segments: Array[BiCcdSegment]:
+	get: return _chain.segments
 
 ## Reusable placement to reduce allocations
 var _placements: AdjustablePlacements
 ## Reusable result to reduce allocations
 var _result: BiCcdReachResult
 
-func _init(p_segments: Array[BiCcdSegment]) -> void:
-	_segments = p_segments
+
+static func apply(
+	p_bases: Array[Basis],
+	p_segments: Array[BiCcdSegment],
+) -> void:
+	assert(p_bases.size() == p_segments.size() + 1)
+	for i in p_segments.size():
+		p_segments[i].basis = p_bases[i + 1]
+
+
+func _init(p_chain: BiCcdChain) -> void:
+	_chain = p_chain
 	_placements = AdjustablePlacements.new(_segments)
 	_result = BiCcdReachResult.empty
 
 
 ## This method does not perform iteration and convergence. It simply process one pass.
-## [param pos]: Local to SegmentLeg space
-## [param out]: Optional argument to reuse reach result to reduce allocations
-func get_backward_adjust_step(position: Vector3) -> BiCcdReachResult:
-	var reached := _placements.adjust_to(position, true, true, true)
-	return _placement_to_result(reached, _placements, _result)
+func get_backward_adjust_step(global_position: Vector3) -> BiCcdReachResult:
+	var local_position := _chain.to_local(global_position)
+	return get_backward_adjust_step_local(local_position)
 	
 ## This method does not perform iteration and convergence. It simply process one pass.
-## [param pos]: Local to SegmentLeg space
+## [param pos]: Local to the [BiCcdChain] space
+func get_backward_adjust_step_local(local_position: Vector3) -> BiCcdReachResult:
+	var reached := _placements.adjust_to(local_position, true, true, true)
+	return _placement_to_result(reached, _placements, _result)
+	
+
+## This method does not perform iteration and convergence. It simply process one pass.
 ## [param joint_to_effector]: If true, align joint-effector to `pos`, else align the joint's segment to `pos`
-## [param out]: Optional argument to reuse reach result to reduce allocations
-## [param refresh]: 
 func get_forward_adjust_step(
-	position: Vector3, 
+	global_position: Vector3, 
 	joint_to_effector: bool = true,
 ) -> BiCcdReachResult:
-	var reached := _placements.adjust_to(position, false, joint_to_effector, true)
+	var local_position := _chain.to_local(global_position)
+	return get_forward_adjust_step_local(local_position, joint_to_effector)
+
+## This method does not perform iteration and convergence. It simply process one pass.
+## [param pos]: Local to the [BiCcdChain] space
+## [param joint_to_effector]: If true, align joint-effector to `pos`, else align the joint's segment to `pos`
+func get_forward_adjust_step_local(
+	local_position: Vector3, 
+	joint_to_effector: bool = true,
+) -> BiCcdReachResult:
+	var reached := _placements.adjust_to(local_position, false, joint_to_effector, true)
 	return _placement_to_result(reached, _placements, _result)
 
 
@@ -42,8 +67,23 @@ func get_forward_adjust_step(
 ##	2: loop between backward and forward adjust, each account for one attempt;
 ## 	3: same as 1, but with the forward pass aligning segment instead of joint-effector
 func get_full_adjust(
+	global_position: Vector3, 
 	mode: int,
-	position: Vector3, 
+	max_attempts: int = 10,
+) -> BiCcdReachResult:
+	var local_position := _chain.to_local(global_position)
+	return get_full_adjust_local(local_position, mode, max_attempts)
+
+## Performs iteration until converged or capped, like traditional CCD
+## [param pos]: Local to the [BiCcdChain] space
+## [param mode]: Some common use cases:
+## 	0: backward adjust only;
+## 	1: forward adjust only;
+##	2: loop between backward and forward adjust, each account for one attempt;
+## 	3: same as 1, but with the forward pass aligning segment instead of joint-effector
+func get_full_adjust_local(
+	local_position: Vector3, 
+	mode: int,
 	max_attempts: int = 10,
 ) -> BiCcdReachResult:
 	assert(max_attempts > 0)
@@ -56,7 +96,7 @@ func get_full_adjust(
 		var backward := true if mode == 0 else false if mode == 1 else (i + 1) % 2 == 1
 		var joint_to_effector := true if mode != 3 or backward else false 
 		if _placements.adjust_to(
-			position, 
+			local_position, 
 			backward, 
 			joint_to_effector,
 			false
@@ -65,6 +105,7 @@ func get_full_adjust(
 			break
 			
 	return _placement_to_result(reached, _placements, _result)
+		
 		
 static func _placement_to_result(
 	reached: bool,
@@ -81,15 +122,6 @@ static func _placement_to_result(
 		placements.bases,
 		placements.positions
 	)
-
-
-static func apply(
-	p_bases: Array[Basis],
-	p_segments: Array[BiCcdSegment],
-) -> void:
-	assert(p_bases.size() == p_segments.size() + 1)
-	for i in p_segments.size():
-		p_segments[i].basis = p_bases[i + 1]
 
 
 class AdjustablePlacements:
