@@ -14,13 +14,17 @@ var _result: BiCcdReachResult
 
 
 static func apply(
-	p_bases: Array[Basis],
 	p_segments: Array[BiCcdSegment],
+	p_bases: Array[Basis],
+	p_positions: Array[Vector3],
 ) -> void:
 	assert(p_bases.size() == p_segments.size() + 1)
+	assert(p_positions.size() == p_segments.size() + 1)
 	for i in p_segments.size():
-		p_segments[i].basis = p_bases[i + 1]
-
+		p_segments[i].transform = Transform3D(
+			p_bases[i + 1],
+			p_positions[i]
+		)
 
 func _init(p_chain: BiCcdChain) -> void:
 	_chain = p_chain
@@ -29,14 +33,20 @@ func _init(p_chain: BiCcdChain) -> void:
 
 
 ## This method does not perform iteration and convergence. It simply process one pass.
-func get_backward_adjust_step(global_position: Vector3) -> BiCcdReachResult:
+func get_backward_adjust_step(
+	global_position: Vector3,
+	tolerance: float,
+) -> BiCcdReachResult:
 	var local_position := _chain.to_local(global_position)
-	return get_backward_adjust_step_local(local_position)
+	return get_backward_adjust_step_local(local_position, tolerance)
 	
 ## This method does not perform iteration and convergence. It simply process one pass.
 ## [param pos]: Local to the [BiCcdChain] space
-func get_backward_adjust_step_local(local_position: Vector3) -> BiCcdReachResult:
-	var reached := _placements.adjust_to(local_position, true, true, true)
+func get_backward_adjust_step_local(
+	local_position: Vector3,
+	tolerance: float,
+) -> BiCcdReachResult:
+	var reached := _placements.adjust_to(local_position, tolerance, true, true, true)
 	return _placement_to_result(reached, _placements, _result)
 	
 
@@ -44,19 +54,21 @@ func get_backward_adjust_step_local(local_position: Vector3) -> BiCcdReachResult
 ## [param joint_to_effector]: If true, align joint-effector to `pos`, else align the joint's segment to `pos`
 func get_forward_adjust_step(
 	global_position: Vector3, 
+	tolerance: float,
 	joint_to_effector: bool = true,
 ) -> BiCcdReachResult:
 	var local_position := _chain.to_local(global_position)
-	return get_forward_adjust_step_local(local_position, joint_to_effector)
+	return get_forward_adjust_step_local(local_position, tolerance, joint_to_effector)
 
 ## This method does not perform iteration and convergence. It simply process one pass.
 ## [param pos]: Local to the [BiCcdChain] space
 ## [param joint_to_effector]: If true, align joint-effector to `pos`, else align the joint's segment to `pos`
 func get_forward_adjust_step_local(
 	local_position: Vector3, 
+	tolerance: float,
 	joint_to_effector: bool = true,
 ) -> BiCcdReachResult:
-	var reached := _placements.adjust_to(local_position, false, joint_to_effector, true)
+	var reached := _placements.adjust_to(local_position, tolerance, false, joint_to_effector, true)
 	return _placement_to_result(reached, _placements, _result)
 
 
@@ -68,11 +80,12 @@ func get_forward_adjust_step_local(
 ## 	3: same as 1, but with the forward pass aligning segment instead of joint-effector
 func get_full_adjust(
 	global_position: Vector3, 
+	tolerance: float,
 	mode: int,
 	max_attempts: int = 10,
 ) -> BiCcdReachResult:
 	var local_position := _chain.to_local(global_position)
-	return get_full_adjust_local(local_position, mode, max_attempts)
+	return get_full_adjust_local(local_position, tolerance, mode, max_attempts)
 
 ## Performs iteration until converged or capped, like traditional CCD
 ## [param pos]: Local to the [BiCcdChain] space
@@ -83,11 +96,12 @@ func get_full_adjust(
 ## 	3: same as 1, but with the forward pass aligning segment instead of joint-effector
 func get_full_adjust_local(
 	local_position: Vector3, 
+	tolerance: float,
 	mode: int,
 	max_attempts: int = 10,
 ) -> BiCcdReachResult:
 	assert(max_attempts > 0)
-	BiCcdUtils.assert_range(mode, 0, 2)
+	BiCcdUtils.assert_range(mode, 0, 3)
 	
 	_placements.refresh()
 	
@@ -97,6 +111,7 @@ func get_full_adjust_local(
 		var joint_to_effector := true if mode != 3 or backward else false 
 		if _placements.adjust_to(
 			local_position, 
+			tolerance,
 			backward, 
 			joint_to_effector,
 			false
@@ -207,7 +222,7 @@ class AdjustablePlacements:
 				target_pos
 			)
 			flex_delta = (
-				seg._clamp_flex_delta(flex_delta_needed)
+				_placements.clamp_flex_delta(seg, flex_delta_needed)
 				if not is_nan(flex_delta_needed) else 
 				0.0 # Skip adjusting instead of fallback as the next frame may change the situation
 			)
@@ -221,7 +236,7 @@ class AdjustablePlacements:
 				flex_delta
 			)
 			yaw_delta = (
-				seg._clamp_yaw_delta(yaw_delta_needed)
+				_placements.clamp_yaw_delta(seg, yaw_delta_needed)
 				if not is_nan(yaw_delta_needed) else 
 				0.0
 			)

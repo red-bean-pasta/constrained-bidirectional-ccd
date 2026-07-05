@@ -47,12 +47,12 @@ func rotate_seg_from_current(seg: BiCcdSegment, flex_delta: float, yaw_delta: fl
 	if BiCcdUtils.is_tau(flex_delta) and BiCcdUtils.is_tau(yaw_delta):
 		return
 		
-	var clamped_flex_delta := _clamp_flex_delta(seg, flex_delta)
-	var clamped_yaw_delta := _clamp_yaw_delta(seg, yaw_delta)
+	var clamped_flex_delta := clamp_flex_delta(seg, flex_delta)
+	var clamped_yaw_delta := clamp_yaw_delta(seg, yaw_delta)
 	
 	var flex := Basis(_get_seg_flex_axis(seg), clamped_flex_delta)
-	var yaw := Basis(_get_seg_yaw_axis(seg), clamped_yaw_delta)
-	var rotation := yaw * flex
+	var yaw := Basis(_get_seg_yaw_axis_after_flex(seg, clamped_flex_delta), clamped_yaw_delta)
+	var rotation := (yaw * flex).orthonormalized()
 	
 	_rotate_and_ripple(seg, rotation)
 	
@@ -138,7 +138,7 @@ func solve_segment_yaw_delta(
 	return solve_relative_yaw_delta(seg, _get_seg_end(seg), target_pos, flex_delta)
 
 
-func _clamp_flex_delta(
+func clamp_flex_delta(
 	seg: BiCcdSegment,
 	delta: float,
 ) -> float:
@@ -147,7 +147,7 @@ func _clamp_flex_delta(
 	var clamped := seg.joint.flex.clamp(current + delta)
 	return clamped - current
 
-func _clamp_yaw_delta(
+func clamp_yaw_delta(
 	seg: BiCcdSegment,
 	delta: float,
 ) -> float:
@@ -170,7 +170,14 @@ func _get_seg_end(seg: BiCcdSegment) -> Vector3:
 	return _position_buffer[seg.index + 1]
 
 func _get_seg_flex_axis(seg: BiCcdSegment) -> Vector3:
-	return _get_seg_prev_basis(seg).y
+	return _get_seg_prev_basis(seg).orthonormalized().x
 	
 func _get_seg_yaw_axis(seg: BiCcdSegment) -> Vector3:
-	return _get_seg_basis(seg).x
+	return _get_seg_basis(seg).orthonormalized().y
+	
+func _get_seg_yaw_axis_after_flex(seg: BiCcdSegment, flex_delta: float) -> Vector3:
+	var flex_axis := _get_seg_flex_axis(seg)
+	var current_yaw_axis := _get_seg_yaw_axis(seg)
+	var flex_rotation := Basis(flex_axis, flex_delta)
+	var flexed_yaw_axis := (flex_rotation * current_yaw_axis).normalized()
+	return flexed_yaw_axis

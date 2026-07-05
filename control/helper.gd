@@ -7,7 +7,9 @@ static func solve_rotation_to_direction(
 	target_pos: Vector3,
 	rotate_axis: Vector3
 ) -> float:
-	assert(rotate_axis.is_normalized())
+	if rotate_axis.is_zero_approx():
+		return NAN
+	rotate_axis = rotate_axis.normalized()
 	var to_end := end_pos - start_pos
 	var to_target := target_pos - start_pos
 	var end_on_plane := to_end.slide(rotate_axis)
@@ -61,8 +63,8 @@ static func calculate_flex_from_basis(
 	basis = basis.orthonormalized()
 	target_dir = target_dir.normalized()
 	
-	var initial_forward := -basis.z.normalized()
-	var flex_axis := basis.x.normalized()
+	var initial_forward := -basis.z
+	var flex_axis := basis.x
 	var desired_in_flex_plane := target_dir.slide(flex_axis)
 	var initial_in_flex_plane := initial_forward
 	
@@ -83,9 +85,9 @@ static func calculate_yaw_from_basis(
 	target_dir = target_dir.normalized()
 	
 	# Construct the basis after flex but before yaw
-	var zero_yaw_basis := (basis * Basis(Vector3.RIGHT, flex_rad)).orthonormalized()
-	var zero_yaw_forward := -zero_yaw_basis.z.normalized()
-	var yaw_axis := zero_yaw_basis.y.normalized()
+	var zero_yaw_basis := basis * Basis(Vector3.RIGHT, flex_rad)
+	var zero_yaw_forward := -zero_yaw_basis.z
+	var yaw_axis := zero_yaw_basis.y
 	var desired_in_yaw_plane := target_dir.slide(yaw_axis)
 	var initial_in_yaw_plane := zero_yaw_forward
 	

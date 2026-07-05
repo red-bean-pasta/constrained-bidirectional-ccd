@@ -110,9 +110,9 @@ func _notification(what: int) -> void:
 func _get_flex_rad() -> float:
 	if not joint.flexible:
 		return joint.flex.rest_rad
-	var current_up := basis.y
-	var prev_up := prev_basis.y
-	var flex_axis := prev_basis.x
+	var current_up := basis.orthonormalized().y
+	var prev_up := prev_basis.orthonormalized().y
+	var flex_axis := prev_basis.orthonormalized().x
 	var rad := prev_up.signed_angle_to(current_up, flex_axis) + PI # Layout of ->-> actually correspond to the flex of PI instead of 0
 	return BiCcdUtils.wrap_rad(rad, joint.flex.min_rad, joint.flex.max_rad)
 
@@ -121,10 +121,10 @@ func _get_yaw_rad() -> float:
 		return joint.yaw.rest_rad
 	
 	var only_flex_basis := Basis(Vector3.RIGHT, current_flex_rad - PI)
-	var zero_yaw_basis := prev_basis * only_flex_basis
+	var zero_yaw_basis := prev_basis.orthonormalized() * only_flex_basis
 
 	var zero_yaw_forward := zero_yaw_basis.z
-	var actual_forward := basis.z
+	var actual_forward := basis.orthonormalized().z
 	var yaw_axis := zero_yaw_basis.y
 	
 	var rad := zero_yaw_forward.signed_angle_to(actual_forward, yaw_axis)
@@ -145,7 +145,8 @@ func _transform_yaw_by(rad: float) -> void:
 		push_warning("Trying to yaw unyawable seg: %s" % get_path())
 		return
 	var clamped := _clamp_yaw_delta(rad)
-	rotate(Vector3.UP, clamped)
+	var yaw_axis := basis.orthonormalized().y
+	rotate(yaw_axis, clamped)
 
 		
 func flex_by(rad: float) -> void:
@@ -162,7 +163,7 @@ func _transform_flex_by(rad: float) -> void:
 		push_warning("Trying to flex inflexible seg: %s" % get_path())
 		return
 	var clamped := _clamp_flex_delta(rad)
-	rotate(prev_basis.x, clamped)
+	rotate(prev_basis.orthonormalized().x, clamped)
 
 
 func _ripple_on_transform_method(callable: Callable, arg: Variant) -> void:
@@ -175,8 +176,13 @@ func _ripple_on_transform_method(callable: Callable, arg: Variant) -> void:
 		return
 	if new.is_equal_approx(old):
 		return
+		
 	assert(get_parent() == subsequent.get_parent())
-	var delta := new * old.affine_inverse()
+	var delta_basis := (new.basis * old.basis.inverse()).orthonormalized()
+	var delta := Transform3D(
+		delta_basis,
+		new.origin - delta_basis * old.origin
+	)
 	subsequent._ripple_transform(delta)
 	
 func _ripple_transform(delta: Transform3D) -> void:
