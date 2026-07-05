@@ -50,6 +50,14 @@ func _ready() -> void:
 	
 	_register_transform_notification()
 	
+	_get_joint_ready()
+	_get_siblings_ready()
+	
+	_validate_siblings.call_deferred() # Wait after all the other segments have finished sibling finding
+	rest.call_deferred() # Rest and rotation require correct siblings 
+	
+
+func _get_joint_ready() -> void:
 	var rest_flex_degree := _rest_flex_degree if not is_nan(_rest_flex_degree) else (_min_flex_degree + _max_flex_degree) * 0.5
 	var flex_spec := BiCcdHingeLimits.create_from_deg(
 		_min_flex_degree,
@@ -65,12 +73,13 @@ func _ready() -> void:
 	)
 	joint = BiCcdJoint.new(flex_spec, yaw_spec)
 	
+func _get_siblings_ready() -> void:
 	if not antecedent: 
 		antecedent = BiCcdUtils.get_previous_sibling(self, BiCcdSegment)
 	if not subsequent:
 		subsequent = BiCcdUtils.get_next_sibling(self, BiCcdSegment)
-	
-	await get_tree().process_frame # Wait for other segments to finish sibling finding
+
+func _validate_siblings() -> void:
 	if antecedent:
 		assert(antecedent.get_parent() == get_parent())
 		assert(antecedent.subsequent == self)
@@ -100,6 +109,11 @@ func _validate_fields() -> void:
 	assert(not is_nan(_min_flex_degree))
 	assert(not is_nan(_max_flex_degree))
 	assert(not is_nan(_max_yaw_degree))
+	
+
+func rest() -> void:
+	flex_to(joint.flex.rest_rad)
+	yaw_to(joint.yaw.rest_rad)
 	
 
 func _notification(what: int) -> void:
