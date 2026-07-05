@@ -4,23 +4,23 @@ class_name BiCcdAdjuster
 
 var _segments: Array[BiCcdSegment]
 
-## Reusable placement to avoid allocations
+## Reusable placement to reduce allocations
 var _placements: AdjustablePlacements
+## Reusable result to reduce allocations
+var _result: BiCcdReachResult
 
 func _init(p_segments: Array[BiCcdSegment]) -> void:
 	_segments = p_segments
 	_placements = AdjustablePlacements.new(_segments)
+	_result = BiCcdReachResult.empty
 
 
 ## This method does not perform iteration and convergence. It simply process one pass.
 ## [param pos]: Local to SegmentLeg space
 ## [param out]: Optional argument to reuse reach result to reduce allocations
-func get_backward_adjust_step(
-	position: Vector3, 
-	output: BiCcdReachResult = null,
-) -> BiCcdReachResult:
+func get_backward_adjust_step(position: Vector3) -> BiCcdReachResult:
 	var reached := _placements.adjust_to(position, true, true, true)
-	return _placement_to_result(reached, _placements, output)
+	return _placement_to_result(reached, _placements, _result)
 	
 ## This method does not perform iteration and convergence. It simply process one pass.
 ## [param pos]: Local to SegmentLeg space
@@ -30,10 +30,9 @@ func get_backward_adjust_step(
 func get_forward_adjust_step(
 	position: Vector3, 
 	joint_to_effector: bool = true,
-	output: BiCcdReachResult = null,
 ) -> BiCcdReachResult:
 	var reached := _placements.adjust_to(position, false, joint_to_effector, true)
-	return _placement_to_result(reached, _placements, output)
+	return _placement_to_result(reached, _placements, _result)
 
 
 ## Performs iteration until converged or capped, like traditional CCD
@@ -46,7 +45,6 @@ func get_full_adjust(
 	mode: int,
 	position: Vector3, 
 	max_attempts: int = 10,
-	output: BiCcdReachResult = null
 ) -> BiCcdReachResult:
 	assert(max_attempts > 0)
 	BiCcdUtils.assert_range(mode, 0, 2)
@@ -66,7 +64,7 @@ func get_full_adjust(
 			reached = true
 			break
 			
-	return _placement_to_result(reached, _placements, output)
+	return _placement_to_result(reached, _placements, _result)
 		
 static func _placement_to_result(
 	reached: bool,

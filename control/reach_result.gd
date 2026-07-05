@@ -16,3 +16,6 @@ func _init(
 	reached = p_reached
 	bases = p_bases
 	positions = p_positions
+	
+static var empty: BiCcdReachResult:
+	get: return BiCcdReachResult.new(false, [], [])
