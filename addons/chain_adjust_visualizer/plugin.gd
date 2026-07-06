@@ -32,8 +32,11 @@ func _set_setting_panel() -> void:
 	_panel = PopupPanel.new()
 	add_child(_panel)
 	
-	var stack := VBoxContainer.new()
+	var stack := _create_container_stack()
 	_panel.add_child(stack)
+	
+func _create_container_stack() -> VBoxContainer:
+	var stack := VBoxContainer.new()
 	
 	var parent_container := _create_grid_container()
 	stack.add_child(parent_container)
@@ -43,6 +46,8 @@ func _set_setting_panel() -> void:
 	
 	var position_container := _create_pin_position_container()
 	stack.add_child(position_container)
+	
+	return stack
 
 func _create_pin_toggle_container() -> GridContainer:
 	var container := GridContainer.new()
@@ -64,7 +69,7 @@ func _create_pin_position_container() -> GridContainer:
 	container.columns = 4
 	
 	var position_label := Label.new()
-	position_label.text = "Target position"
+	position_label.text = "Target Position"
 	container.add_child(position_label)
 	
 	var input: Array[String] = ["_x_input", "_y_input", "_z_input"]
@@ -82,13 +87,16 @@ func _create_pin_position_container() -> GridContainer:
 	return container
 
 
-func _adjust_chain(chain: BiCcdChain, point: Vector3) -> void:
-	if not _ensure_environment():
-		return
-
+func _chain_on_click(chain: BiCcdChain, point: Vector3) -> void:
 	if _pinned:
 		point = _pinned_position
 		print(label, ": Target position pinned: ", point)
+		
+	_draw_chain_adjustment_path(chain, point)
+
+func _draw_chain_adjustment_path(chain: BiCcdChain, point: Vector3) -> void:
+	if not _ensure_environment():
+		return
 
 	print(label, ": Visualizing for chain ", chain.name)
 	var adjusts := _get_adjusts(chain, point)
@@ -110,7 +118,7 @@ func _adjust_chain(chain: BiCcdChain, point: Vector3) -> void:
 		chain.to_global(adjusts[-1].positions[-1]),
 	)
 	
-	print(label, ": ", "Successfully" if adjusts[-1].reached else "Failed to fully" ," converged to position ", point)
+	_log_result(adjusts[-1].reached, point, adjusts[-1].positions[-1])
 
 func _ensure_environment() -> bool:
 	if EditorInterface.get_edited_scene_root() == null:

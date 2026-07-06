@@ -1,9 +1,8 @@
 @tool
-extends BiCcdEditorClickNotifier
+extends BiCcdEditorPanelClickNotifier
 class_name BiCcdEditorChainAdjuster
 
 
-var _panel: PopupPanel
 var _tolerance_input: SpinBox
 var _mode_input: OptionButton
 var _align_segment_first_check: CheckBox
@@ -31,22 +30,6 @@ func _get_label() -> String:
 func _get_tooltip() -> String:
 	return "Activate to adjust selected BiCcdChains to clicked positions in the editor viewport"
 	
-	
-func _on_toggled(pressed: bool) -> void:
-	if pressed:
-		_popup_setting_panel()
-	else:
-		_panel.hide()
-		
-func _popup_setting_panel() -> void:
-	var popup_position := Vector2i(
-		_button.global_position.x,
-		_button.global_position.y + _button.size.y
-	)
-	_panel.popup(
-		Rect2i(popup_position, Vector2i(350, 100))
-	)
-
 
 func _on_tree_entered() -> void:
 	_set_setting_panel()
@@ -114,10 +97,10 @@ func _on_click(point: Vector3) -> void:
 	if chains.is_empty():
 		print(label, ": No chain selected. Skiping...")
 		return
-		
-	print(label, ": Adjust with tolerance ", _tolerance, ", mode ", _mode)
+	
+	_log_settings()
 	for c in chains:
-		_adjust_chain(c, point)
+		_chain_on_click(c, point)
 
 func _get_selected_chain() -> Array[BiCcdChain]:
 	var selected: Array[BiCcdChain] = []
@@ -128,11 +111,19 @@ func _get_selected_chain() -> Array[BiCcdChain]:
 	)
 	return selected
 	
+func _log_settings() -> void:
+	print("%s: Applying settings: tolerance: %s; mode: %s; align segments first: %s" % [label, _tolerance, _mode, _align_segment_first])
+		
+func _chain_on_click(chain: BiCcdChain, point: Vector3) -> void:
+	_adjust_chain(chain, point)
+	
 func _adjust_chain(chain: BiCcdChain, point: Vector3) -> void:
 	var result := chain.adjuster.get_full_adjust(point, _tolerance, _mode, _max_attempts, _align_segment_first)
 	chain.adjuster.apply(chain.segments, result.bases, result.positions)
-	if result.reached:
-		print(label, ": Successfully converged to position ", point)
+	_log_result(result.reached, point, result.positions[-1])
+
+func _log_result(reached: bool, target: Vector3, result: Vector3) -> void:
+	if reached:
+		print(label, ": Successfully converged to position ", target)
 	else:
-		print(label, ": Failed to fully converge to position ", point, " with difference ", point.distance_to(result.positions[-1]))
-	
+		print(label, ": Failed to fully converge to position ", target, " with difference ", target.distance_to(result))
