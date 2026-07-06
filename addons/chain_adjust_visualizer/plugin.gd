@@ -105,9 +105,9 @@ func _adjust_chain(chain: BiCcdChain, point: Vector3) -> void:
 	parent.global_transform = chain.global_transform
 	parent.init_data(
 		adjusts[-1].reached,
+		adjusts.size(),
 		point, 
 		chain.to_global(adjusts[-1].positions[-1]),
-		adjusts.size()
 	)
 	
 	print(label, ": ", "Successfully" if adjusts[-1].reached else "Failed to fully" ," converged to position ", point)
@@ -116,7 +116,7 @@ func _ensure_environment() -> bool:
 	if EditorInterface.get_edited_scene_root() == null:
 		push_error(label, ": No active scene open")
 		return false
-	if max_attempts < 1:
+	if _max_attempts < 1:
 		push_error(label, ": Max attempts must be greater than 0")
 		return false
 	return true
@@ -126,36 +126,32 @@ func _get_adjusts(
 	point: Vector3,
 ) -> Array[BiCcdReachResult]:
 	var cache: Array[BiCcdReachResult] = []
-		
 	var adjuster := chain.adjuster
+	var max_attempts := _max_attempts
+	
 	adjuster._placements.refresh()
 	
+	if _align_segment_first:
+		var result := adjuster.get_segment_forward_adjust_step(point, _tolerance, false)
+		cache.append(result.duplicate())
+		max_attempts -= 1
+		if result.reached:
+			return cache
+	
 	for i in max_attempts:
-		var result: BiCcdReachResult
-		
 		var backward := (
 			true 
-			if mode == Mode.BACKWARD else 
+			if _mode == Mode.BACKWARD else 
 			false 
-			if mode == Mode.FORWARD else 
+			if _mode == Mode.FORWARD else 
 			(i + 1) % 2 == 1
 		) 
-		if backward:
-			result = adjuster.get_backward_adjust_step(
-				point,
-				tolerance,
-				false
-			)
-		else:
-			var joint_to_effector := mode != Mode.BACKWARD_SEGMENT_FORWARD
-			result = adjuster.get_forward_adjust_step(
-				point,
-				tolerance,
-				joint_to_effector,
-				false
-			)
+		var result := (
+			adjuster.get_backward_adjust_step(point, _tolerance, false)
+			if backward else 
+			adjuster.get_forward_adjust_step(point, _tolerance, false)
+		)
 		cache.append(result.duplicate())
-		
 		if result.reached:
 			break
 	
@@ -224,6 +220,7 @@ func _add_lines_to_group(lines: Array[MeshInstance3D], group: Node) -> BiCcdAdju
 
 
 func _get_vision_name(chain: BiCcdChain, point: Vector3) -> String:
+	var mode_affix := "%s_%s" % [_mode, _align_segment_first]
 	var point_mm := point * 1000
-	var affix := "%s_%s_%s" % [int(point_mm.x), int(point_mm.y), int(point_mm.z)]
-	return "%s_%s" % [chain.name, affix]
+	var point_affix := "%s_%s_%s" % [int(point_mm.x), int(point_mm.y), int(point_mm.z)]
+	return "%s_%s_%s" % [chain.name, mode_affix, point_affix]

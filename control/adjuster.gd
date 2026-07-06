@@ -52,31 +52,47 @@ func get_backward_adjust_step_local(
 	tolerance: float,
 	refresh: bool = true,
 ) -> BiCcdReachResult:
-	var reached := _placements.adjust_to(local_position, tolerance, true, true, refresh)
+	var reached := _placements.adjust_to(local_position, tolerance, true, refresh)
 	return _placement_to_result(reached, _placements, _result)
 	
 
 ## This method does not perform iteration and convergence. It simply process one pass.
-## [param joint_to_effector]: If true, align joint-effector to `pos`, else align the joint's segment to `pos`
 func get_forward_adjust_step(
 	global_position: Vector3, 
 	tolerance: float,
-	joint_to_effector: bool = true,
 	refresh: bool = true,
 ) -> BiCcdReachResult:
 	var local_position := _chain.to_local(global_position)
-	return get_forward_adjust_step_local(local_position, tolerance, joint_to_effector, refresh)
+	return get_forward_adjust_step_local(local_position, tolerance, refresh)
 
 ## This method does not perform iteration and convergence. It simply process one pass.
 ## [param pos]: Local to the [BiCcdChain] space
-## [param joint_to_effector]: If true, align joint-effector to `pos`, else align the joint's segment to `pos`
 func get_forward_adjust_step_local(
 	local_position: Vector3, 
 	tolerance: float,
-	joint_to_effector: bool = true,
 	refresh: bool = true,
 ) -> BiCcdReachResult:
-	var reached := _placements.adjust_to(local_position, tolerance, false, joint_to_effector, refresh)
+	var reached := _placements.adjust_to(local_position, tolerance, false, refresh)
+	return _placement_to_result(reached, _placements, _result)
+
+
+## This method does not perform iteration and convergence. It simply process one pass.
+func get_segment_forward_adjust_step(
+	global_position: Vector3, 
+	tolerance: float,
+	refresh: bool = true,
+) -> BiCcdReachResult:
+	var local_position := _chain.to_local(global_position)
+	return get_segment_forward_adjust_step_local(local_position, tolerance, refresh)
+
+## This method does not perform iteration and convergence. It simply process one pass.
+## [param pos]: Local to the [BiCcdChain] space
+func get_segment_forward_adjust_step_local(
+	local_position: Vector3, 
+	tolerance: float,
+	refresh: bool = true,
+) -> BiCcdReachResult:
+	var reached := _placements.adjust_segment_to(local_position, tolerance, false, refresh)
 	return _placement_to_result(reached, _placements, _result)
 
 
@@ -85,48 +101,64 @@ func get_forward_adjust_step_local(
 ## 	0: backward adjust only;
 ## 	1: forward adjust only;
 ##	2: loop between backward and forward adjust, each account for one attempt;
-## 	3: same as 1, but with the forward pass aligning segment instead of joint-effector
 func get_full_adjust(
 	global_position: Vector3, 
 	tolerance: float,
 	mode: int,
 	max_attempts: int = 10,
+	align_segment_first: bool = false
 ) -> BiCcdReachResult:
 	var local_position := _chain.to_local(global_position)
 	return get_full_adjust_local(local_position, tolerance, mode, max_attempts)
 
 ## Performs iteration until converged or capped, like traditional CCD
 ## [param pos]: Local to the [BiCcdChain] space
-## [param mode]: Some common use cases:
+## [param mode]: Some convenient common use cases:
 ## 	0: backward adjust only;
 ## 	1: forward adjust only;
-##	2: loop between backward and forward adjust, each account for one attempt;
-## 	3: same as 1, but with the forward pass aligning segment instead of joint-effector
+##	2: loop between backward and forward adjust, each accounting for one attempt;
+## [param align_segment_first]: Forward align segment instead of joint-effector to the target position first before performing adjustments. Account as one attempt
 func get_full_adjust_local(
 	local_position: Vector3, 
 	tolerance: float,
 	mode: int,
 	max_attempts: int = 10,
+	align_segment_first: bool = false
 ) -> BiCcdReachResult:
 	assert(max_attempts > 0)
-	BiCcdUtils.assert_range(mode, 0, 3)
+	BiCcdUtils.assert_range(mode, 0, 2)
 	
 	_placements.refresh()
 	
 	var reached: bool = false
+	
+	if align_segment_first:
+		reached = _placements.adjust_segment_to(
+			local_position, 
+			tolerance,
+			true, 
+			false
+		)
+		max_attempts -= 1
+	if reached:
+		return _placement_to_result(reached, _placements, _result)
+	
 	for i in max_attempts:
-		var backward := true if mode == 0 else false if mode == 1 else (i + 1) % 2 == 1
-		var joint_to_effector := true if mode != 3 or backward else false 
+		var backward := (
+			true 
+			if mode == 0 else 
+			false 
+			if mode == 1 else 
+			(i + 1) % 2 == 1
+		)
 		if _placements.adjust_to(
 			local_position, 
 			tolerance,
 			backward, 
-			joint_to_effector,
 			false
 		):
 			reached = true
 			break
-			
 	return _placement_to_result(reached, _placements, _result)
 		
 		
@@ -170,13 +202,31 @@ class AdjustablePlacements:
 		_placements.refresh()
 	
 	## [param p_from_terminal]: If true, adjust from the terminal to the target pos then propagate to the proximal, vice versa
-	## [param p_joint_to_effector]: Cautious: If false, it will align the joint's segment to the target position rather than the joint-effector
-	## [param p_refresh]: Cautious: If false, process will happen on whatever was left since the last adjustment, which may not correctly reflect the current layout of segments
+	## [param p_joint_to_effector]: 
+	## [param p_refresh]: If false, process will happen on whatever was left since the last adjustment, which may not correctly reflect the current layout of segments
 	func adjust_to(
 		p_position: Vector3,
 		p_tolerance: float,
 		p_backward: bool,
-		p_joint_to_effector: bool = true,
+		p_refresh: bool = true,
+	) -> bool:
+		return _adjust_to(p_position, p_tolerance, p_backward, true, p_refresh)
+	
+	## Align the joint's segment to the target position rather than the joint-effector
+	## [param p_refresh]: If false, process will happen on whatever was left since the last adjustment, which may not correctly reflect the current layout of segments
+	func adjust_segment_to(
+		p_position: Vector3,
+		p_tolerance: float,
+		p_backward: bool = true,
+		p_refresh: bool = true,
+	) -> bool:
+		return _adjust_to(p_position, p_tolerance, p_backward, false, p_refresh)
+		
+	func _adjust_to(
+		p_position: Vector3,
+		p_tolerance: float,
+		p_backward: bool,
+		p_joint_to_effector: bool,
 		p_refresh: bool = true,
 	) -> bool:
 		if _count < 1:

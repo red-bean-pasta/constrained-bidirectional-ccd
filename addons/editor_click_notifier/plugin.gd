@@ -109,7 +109,7 @@ func _get_clicked_position(
 	camera: Camera3D,
 	mouse_position: Vector2
 ) -> Variant:
-	var selected := EditorInterface.get_selection().get_selected_nodes()
+	var selected := EditorInterface.get_selection().get_selected_nodes().filter(func(n): return n is Node3D)
 	if selected.is_empty():
 		print(label, ": No editor node selected")
 		return null

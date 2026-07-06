@@ -8,6 +8,12 @@ var _reached: bool
 @export var reached: bool:
 	get: return _reached
 	set(value): pass
+	
+var _iteration: int
+## The total iteration count. Can be smaller than max attempts when reached early
+@export var iteration: int:
+	get: return _iteration
+	set(value): pass
 
 var _destination: Vector3
 ## The initial target point in global space before adjustments
@@ -20,21 +26,20 @@ var _result: Vector3
 @export var result: Vector3:
 	get: return _result
 	set(value): pass
-	
-var _iteration: int
-## The total iteration count. Can be smaller than max attempts when reached early
-@export var iteration: int:
-	get: return _iteration
+
+## The distance between target position and adjusted result 
+@export var difference: float:
+	get: return result.distance_to(destination)
 	set(value): pass
 	
 	
 func init_data(
 	reached: bool,
+	iteration: int,
 	dest: Vector3, 
 	result: Vector3,
-	iteration: int,
 ) -> void:
 	_reached = reached
+	_iteration = iteration
 	_destination = dest
 	_result = result
-	_iteration = iteration
