@@ -7,7 +7,8 @@ signal ray_clicked(origin: Vector3, direction: Vector3)
 signal point_clicked(point: Vector3)
 
 var _button: Button
-var enabled := false
+var enabled: bool:
+	get: return _button.button_pressed
 
 var label: String:
 	get: return _get_label()
@@ -53,7 +54,6 @@ func _create_button() -> void:
 
 func _on_toggled_inner(pressed: bool) -> void:
 	print(label, " enabled" if pressed else " disabled")
-	enabled = pressed
 	_on_toggled(pressed)
 	
 

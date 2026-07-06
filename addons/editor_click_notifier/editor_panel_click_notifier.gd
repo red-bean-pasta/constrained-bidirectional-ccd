@@ -5,10 +5,26 @@ class_name BiCcdEditorPanelClickNotifier
 
 var _panel: PopupPanel
 
-func _on_toggled(pressed: bool) -> void:
-	if pressed:
+func _ready() -> void:
+	_panel.popup_hide.connect(_on_panel_hidden)
+
+func _on_toggled_inner(on: bool) -> void:
+	if on:
+		_on_toggled(true)
+		return
+	
+	if not _panel.visible: 
+		_button.set_pressed_no_signal(true) 
+		_popup_setting_panel() 
+		return
+	
+	_on_toggled(false)
+
+func _on_toggled(on: bool) -> void:
+	print(label, " enabled" if on else " disabled")
+	if on:
 		_popup_setting_panel()
-	else:
+	elif _panel.visible:
 		_panel.hide()
 		
 func _popup_setting_panel() -> void:
@@ -19,3 +35,8 @@ func _popup_setting_panel() -> void:
 	_panel.popup(
 		Rect2i(popup_position, Vector2i(350, 100))
 	)
+
+func _on_panel_hidden() -> void:
+	if _button.get_global_rect().has_point(_button.get_global_mouse_position()):
+		_button.set_pressed_no_signal(false)
+		_on_toggled(false)
