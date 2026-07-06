@@ -140,7 +140,7 @@ func _get_adjusts(
 	adjuster._placements.refresh()
 	
 	if _align_segment_first:
-		var result := adjuster.get_segment_forward_adjust_step(point, _tolerance, false)
+		var result := adjuster.get_segments_forward_adjust_step(point, _tolerance, false)
 		cache.append(result.duplicate())
 		max_attempts -= 1
 		if result.reached:

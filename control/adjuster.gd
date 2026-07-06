@@ -30,10 +30,6 @@ func _init(p_chain: BiCcdChain) -> void:
 	_chain = p_chain
 	_placements = AdjustablePlacements.new(_segments)
 	_result = BiCcdReachResult.empty
-	
-## Must be called when the chain is updated to refresh placements cache
-func update() -> void:
-	_placements = AdjustablePlacements.new(_segments)
 
 
 ## This method does not perform iteration and convergence. It simply process one pass.
@@ -77,22 +73,22 @@ func get_forward_adjust_step_local(
 
 
 ## This method does not perform iteration and convergence. It simply process one pass.
-func get_segment_forward_adjust_step(
+func get_segments_forward_adjust_step(
 	global_position: Vector3, 
 	tolerance: float,
 	refresh: bool = true,
 ) -> BiCcdReachResult:
 	var local_position := _chain.to_local(global_position)
-	return get_segment_forward_adjust_step_local(local_position, tolerance, refresh)
+	return get_segments_forward_adjust_step_local(local_position, tolerance, refresh)
 
 ## This method does not perform iteration and convergence. It simply process one pass.
 ## [param pos]: Local to the [BiCcdChain] space
-func get_segment_forward_adjust_step_local(
+func get_segments_forward_adjust_step_local(
 	local_position: Vector3, 
 	tolerance: float,
 	refresh: bool = true,
 ) -> BiCcdReachResult:
-	var reached := _placements.adjust_segment_to(local_position, tolerance, false, refresh)
+	var reached := _placements.adjust_segments_to(local_position, tolerance, false, refresh)
 	return _placement_to_result(reached, _placements, _result)
 
 
@@ -106,7 +102,7 @@ func get_full_adjust(
 	tolerance: float,
 	mode: int,
 	max_attempts: int = 10,
-	align_segment_first: bool = false
+	align_segments_first: bool = false
 ) -> BiCcdReachResult:
 	var local_position := _chain.to_local(global_position)
 	return get_full_adjust_local(local_position, tolerance, mode, max_attempts)
@@ -123,7 +119,7 @@ func get_full_adjust_local(
 	tolerance: float,
 	mode: int,
 	max_attempts: int = 10,
-	align_segment_first: bool = false
+	align_segments_first: bool = false
 ) -> BiCcdReachResult:
 	assert(max_attempts > 0)
 	BiCcdUtils.assert_range(mode, 0, 2)
@@ -132,11 +128,11 @@ func get_full_adjust_local(
 	
 	var reached: bool = false
 	
-	if align_segment_first:
-		reached = _placements.adjust_segment_to(
+	if align_segments_first:
+		reached = _placements.adjust_segments_to(
 			local_position, 
 			tolerance,
-			true, 
+			false, 
 			false
 		)
 		max_attempts -= 1
@@ -194,8 +190,7 @@ class AdjustablePlacements:
 	
 	## [param p_basis_buffer]: Optional reusable basis buffer to avoid allocation. Micro-optiomization
 	func _init(p_segments: Array[BiCcdSegment]) -> void:
-		if p_segments.size() < 1:
-			push_warning("Initliazed with empty segments")
+		assert(p_segments.size() > 0)
 		_placements = BiCcdPlacements.new(p_segments)
 	
 	func refresh() -> void:
@@ -214,10 +209,10 @@ class AdjustablePlacements:
 	
 	## Align the joint's segment to the target position rather than the joint-effector
 	## [param p_refresh]: If false, process will happen on whatever was left since the last adjustment, which may not correctly reflect the current layout of segments
-	func adjust_segment_to(
+	func adjust_segments_to(
 		p_position: Vector3,
 		p_tolerance: float,
-		p_backward: bool = true,
+		p_backward: bool = false,
 		p_refresh: bool = true,
 	) -> bool:
 		return _adjust_to(p_position, p_tolerance, p_backward, false, p_refresh)
