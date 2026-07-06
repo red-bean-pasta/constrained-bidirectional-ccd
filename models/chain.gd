@@ -7,14 +7,18 @@ class_name BiCcdChain
 var adjuster: BiCcdAdjuster
 
 func _ready() -> void:
+	_populate_segments()
+	adjuster = BiCcdAdjuster.new(self)
+	
+	child_order_changed.connect(_on_segment_update)
+	
+func _populate_segments() -> void:
 	if segments.is_empty():
 		for c in get_children():
 			if c is BiCcdSegment:
 				segments.append(c)
 	assert(segments.all(func(s): return s != null))
 	assert(_check_segment_ordered())
-	
-	adjuster = BiCcdAdjuster.new(self)
 	
 func _check_segment_ordered() -> bool:
 	var size := segments.size()
@@ -32,3 +36,7 @@ func _check_segment_ordered() -> bool:
 		):
 			return false
 	return true
+	
+func _on_segment_update() -> void:
+	_populate_segments()
+	adjuster.update()

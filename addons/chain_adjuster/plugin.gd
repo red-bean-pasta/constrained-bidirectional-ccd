@@ -1,6 +1,6 @@
 @tool
-extends EditorClickNotifier
-class_name EditorChainAdjuster
+extends BiCcdEditorClickNotifier
+class_name BiCcdEditorChainAdjuster
 
 
 var _panel: PopupPanel
@@ -47,42 +47,45 @@ func _popup_setting_panel() -> void:
 
 
 func _on_tree_entered() -> void:
-	_create_setting_panel()
+	_set_setting_panel()
 	point_clicked.connect(_on_click)
 
-func _create_setting_panel() -> void:
+func _set_setting_panel() -> void:
 	_panel = PopupPanel.new()
 	add_child(_panel)
+	
+	var container := _create_grid_container()
+	_panel.add_child(container)
 
-	var fields := GridContainer.new()
-	fields.columns = 2
-	_panel.add_child(fields)
+func _create_grid_container() -> GridContainer:
+	var container := GridContainer.new()
+	container.columns = 2
 
 	var tolerance_label := Label.new()
 	tolerance_label.text = "Tolerance"
-	fields.add_child(tolerance_label)
+	container.add_child(tolerance_label)
 
 	_tolerance_input = SpinBox.new()
 	_tolerance_input.min_value = 0
 	_tolerance_input.max_value = INF
 	_tolerance_input.step = 0
 	_tolerance_input.set_value_no_signal(0.001)
-	fields.add_child(_tolerance_input)
+	container.add_child(_tolerance_input)
 
 	var mode_label := Label.new()
 	mode_label.text = "Mode"
-	fields.add_child(mode_label)
+	container.add_child(mode_label)
 
 	_mode_input = OptionButton.new()
 	_mode_input.add_item("Backward", Mode.BACKWARD)
 	_mode_input.add_item("Forward", Mode.FORWARD)
 	_mode_input.add_item("Backward + Forward", Mode.BACKWARD_FORWARD)
 	_mode_input.add_item("Backward + Segment Forward", Mode.BACKWARD_SEGMENT_FORWARD)
-	fields.add_child(_mode_input)
+	container.add_child(_mode_input)
 	
 	var max_attempt_label := Label.new()
 	max_attempt_label.text = "Max Attempts"
-	fields.add_child(max_attempt_label)
+	container.add_child(max_attempt_label)
 	
 	_max_attempt_input = SpinBox.new()
 	_max_attempt_input.min_value = 0
@@ -91,8 +94,10 @@ func _create_setting_panel() -> void:
 	_max_attempt_input.rounded = true
 	_max_attempt_input.set_value_no_signal(10)
 	_max_attempt_input.tooltip_text = "Maximum adjust attempts"
-	fields.add_child(_max_attempt_input)
+	container.add_child(_max_attempt_input)
 	
+	return container
+
 
 func _on_click(point: Vector3) -> void:
 	var chains := _get_selected_chain()

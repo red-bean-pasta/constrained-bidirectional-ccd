@@ -16,6 +16,14 @@ func _init(
 	reached = p_reached
 	bases = p_bases
 	positions = p_positions
+
+## Return a deep copy of the current instance
+func duplicate() -> BiCcdReachResult:
+	return BiCcdReachResult.new(
+		reached,
+		bases.duplicate(),
+		positions.duplicate()
+	)
 	
 static var empty: BiCcdReachResult:
 	get: return BiCcdReachResult.new(false, [], [])

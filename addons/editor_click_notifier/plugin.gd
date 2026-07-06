@@ -1,6 +1,6 @@
 @abstract
 extends EditorPlugin
-class_name EditorClickNotifier
+class_name BiCcdEditorClickNotifier
 
 
 signal ray_clicked(origin: Vector3, direction: Vector3)

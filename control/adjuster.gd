@@ -30,23 +30,29 @@ func _init(p_chain: BiCcdChain) -> void:
 	_chain = p_chain
 	_placements = AdjustablePlacements.new(_segments)
 	_result = BiCcdReachResult.empty
+	
+## Must be called when the chain is updated to refresh placements cache
+func update() -> void:
+	_placements = AdjustablePlacements.new(_segments)
 
 
 ## This method does not perform iteration and convergence. It simply process one pass.
 func get_backward_adjust_step(
 	global_position: Vector3,
 	tolerance: float,
+	refresh: bool = true,
 ) -> BiCcdReachResult:
 	var local_position := _chain.to_local(global_position)
-	return get_backward_adjust_step_local(local_position, tolerance)
+	return get_backward_adjust_step_local(local_position, tolerance, refresh)
 	
 ## This method does not perform iteration and convergence. It simply process one pass.
 ## [param pos]: Local to the [BiCcdChain] space
 func get_backward_adjust_step_local(
 	local_position: Vector3,
 	tolerance: float,
+	refresh: bool = true,
 ) -> BiCcdReachResult:
-	var reached := _placements.adjust_to(local_position, tolerance, true, true, true)
+	var reached := _placements.adjust_to(local_position, tolerance, true, true, refresh)
 	return _placement_to_result(reached, _placements, _result)
 	
 
@@ -56,9 +62,10 @@ func get_forward_adjust_step(
 	global_position: Vector3, 
 	tolerance: float,
 	joint_to_effector: bool = true,
+	refresh: bool = true,
 ) -> BiCcdReachResult:
 	var local_position := _chain.to_local(global_position)
-	return get_forward_adjust_step_local(local_position, tolerance, joint_to_effector)
+	return get_forward_adjust_step_local(local_position, tolerance, joint_to_effector, refresh)
 
 ## This method does not perform iteration and convergence. It simply process one pass.
 ## [param pos]: Local to the [BiCcdChain] space
@@ -67,8 +74,9 @@ func get_forward_adjust_step_local(
 	local_position: Vector3, 
 	tolerance: float,
 	joint_to_effector: bool = true,
+	refresh: bool = true,
 ) -> BiCcdReachResult:
-	var reached := _placements.adjust_to(local_position, tolerance, false, joint_to_effector, true)
+	var reached := _placements.adjust_to(local_position, tolerance, false, joint_to_effector, refresh)
 	return _placement_to_result(reached, _placements, _result)
 
 
@@ -154,6 +162,8 @@ class AdjustablePlacements:
 	
 	## [param p_basis_buffer]: Optional reusable basis buffer to avoid allocation. Micro-optiomization
 	func _init(p_segments: Array[BiCcdSegment]) -> void:
+		if p_segments.size() < 1:
+			push_warning("Initliazed with empty segments")
 		_placements = BiCcdPlacements.new(p_segments)
 	
 	func refresh() -> void:
@@ -169,6 +179,8 @@ class AdjustablePlacements:
 		p_joint_to_effector: bool = true,
 		p_refresh: bool = true,
 	) -> bool:
+		if _count < 1:
+			return false
 		if p_refresh:
 			refresh()
 		if p_backward: # To avoid the range()
