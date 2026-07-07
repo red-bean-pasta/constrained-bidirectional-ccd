@@ -5,23 +5,24 @@ class_name BiCcdEditorChainAdjuster
 
 var _tolerance_input: SpinBox
 var _mode_input: OptionButton
+var _backward_first_check: CheckBox
+var _forward_first_check: CheckBox
 var _align_segment_first_check: CheckBox
+
 var _max_attempt_input: SpinBox
 
 var _tolerance: float: 
 	get: return _tolerance_input.value
-var _mode: Mode:
+var _mode: BiCcdAdjuster.CompleteFullAdjustMode:
 	get: return _mode_input.selected
+var _backward_first: bool:
+	get: return _backward_first_check.button_pressed
+var _forward_first: bool:
+	get: return _forward_first_check.button_pressed
 var _align_segment_first: bool:
 	get: return _align_segment_first_check.button_pressed
 var _max_attempts: int:
 	get: return int(_max_attempt_input.value)
-	
-enum Mode {
-	BACKWARD,
-	FORWARD,
-	BACKWARD_FORWARD,
-}
 
 
 func _get_label() -> String:
@@ -46,50 +47,114 @@ func _create_grid_container() -> GridContainer:
 	var container := GridContainer.new()
 	container.columns = 2
 
-	var tolerance_label := Label.new()
-	tolerance_label.text = "Tolerance"
-	container.add_child(tolerance_label)
+	_tolerance_input = _add_spinbox(
+		container,
+		"Tolerance",
+		"Bearable distance before consider reached. Setting this to 0 may result in always unreachable returns.",
+		0,
+		INF,
+		0,
+		0.01,
+	)
 
-	_tolerance_input = SpinBox.new()
-	_tolerance_input.min_value = 0
-	_tolerance_input.max_value = INF
-	_tolerance_input.step = 0
-	_tolerance_input.set_value_no_signal(0.001)
-	container.add_child(_tolerance_input)
-
-	var mode_label := Label.new()
-	mode_label.text = "Mode"
-	container.add_child(mode_label)
-
-	_mode_input = OptionButton.new()
-	_mode_input.add_item("Backward", Mode.BACKWARD)
-	_mode_input.add_item("Forward", Mode.FORWARD)
-	_mode_input.add_item("Cyclic", Mode.BACKWARD_FORWARD)
-	container.add_child(_mode_input)
+	_mode_input = _add_enumed_option_button(
+		"Mode",
+		"Iteration mode",
+		BiCcdAdjuster.CompleteFullAdjustMode,
+		container
+	)
 	
-	var align_segment_label := Label.new()
-	align_segment_label.text = "Align segment first"
-	align_segment_label.tooltip_text = "If checked, a forward adjustment will be performed first to align segments to the target position. Note that it aligns segments instead of joint-effector. This may or may not result in more natural and determined pose. This consumes 1 attempt from max attempts."
-	container.add_child(align_segment_label)
-
-	_align_segment_first_check = CheckBox.new()
-	_align_segment_first_check.button_pressed = false
-	container.add_child(_align_segment_first_check)
+	_backward_first_check = _add_checkbox(
+		"Backwards adjustment first",
+		"If checked, a backward adjustment to the target position will be performed first. This consumes 1 attempt from max attempts. If both Align segments alignment are enabled as well, segments are be aligned first.",
+		false,
+		container
+	)
+	_forward_first_check = _add_checkbox(
+		"Forwards adjustment first",
+		"If checked, a forward adjustment to the target position will be performed first. This consumes 1 attempt from max attempts. If both Align segments alignment are enabled as well, segments are be aligned first.",
+		false,
+		container
+	)
+	_align_segment_first_check = _add_checkbox(
+		"Align segments first",
+		"If checked, it will align segments to the target position from proximal to the distal first. Note that it aligns segments instead of joint-effector. This may or may not result in more natural and determined pose. This consumes 1 attempt from max attempts.",
+		false,
+		container
+	)
 	
-	var max_attempt_label := Label.new()
-	max_attempt_label.text = "Max Attempts"
-	container.add_child(max_attempt_label)
-	
-	_max_attempt_input = SpinBox.new()
-	_max_attempt_input.min_value = 0
-	_max_attempt_input.max_value = INF
-	_max_attempt_input.step = 1
-	_max_attempt_input.rounded = true
-	_max_attempt_input.set_value_no_signal(10)
-	_max_attempt_input.tooltip_text = "Maximum adjust attempts"
-	container.add_child(_max_attempt_input)
+	_max_attempt_input = _add_spinbox(
+		container,
+		"Max Attempts",
+		"Maximum adjust attempts",
+		0,
+		INF,
+		1,
+		10,
+		true
+	)
 	
 	return container
+
+func _add_enumed_option_button(
+	label: String,
+	tooltip: String,
+	type: Variant, 
+	container: Container
+) ->  OptionButton:
+	var l := Label.new()
+	l.text = label
+	l.tooltip_text = tooltip
+	container.add_child(l)
+
+	var b := OptionButton.new()
+	for k: String in type:
+		b.add_item(k.capitalize(), type[k])
+	container.add_child(b)
+	
+	return b
+
+func _add_checkbox(
+	label: String,
+	tooltip: String,
+	default: bool,
+	container: Container
+) -> CheckBox:
+	var l := Label.new()
+	l.text = label
+	l.tooltip_text = tooltip
+	container.add_child(l)
+
+	var b := CheckBox.new()
+	b.button_pressed = default
+	container.add_child(b)
+	
+	return b
+
+func _add_spinbox(
+	container: Container,
+	label: String,
+	tooptip: String,
+	min_value: float,
+	max_value: float,
+	step: float,
+	default: float,
+	rounded: bool = false
+) -> SpinBox:
+	var l := Label.new()
+	l.text = label
+	l.tooltip_text = tooptip
+	container.add_child(l)
+	
+	var b := SpinBox.new()
+	b.min_value = min_value
+	b.max_value = max_value
+	b.step = step
+	b.rounded = rounded
+	b.set_value_no_signal(default)
+	container.add_child(b)
+	
+	return b
 
 
 func _on_click(point: Vector3) -> void:
@@ -112,13 +177,13 @@ func _get_selected_chain() -> Array[BiCcdChain]:
 	return selected
 	
 func _log_settings() -> void:
-	print("%s: Applying settings: tolerance: %s; mode: %s; align segments first: %s" % [label, _tolerance, _mode, _align_segment_first])
+	print("%s: Applying settings: tolerance: %s; mode: %s; backward first: %s; forward first: %s; align segments first: %s" % [label, _tolerance, _mode, _backward_first, _forward_first, _align_segment_first])
 		
 func _chain_on_click(chain: BiCcdChain, point: Vector3) -> void:
 	_adjust_chain(chain, point)
 	
 func _adjust_chain(chain: BiCcdChain, point: Vector3) -> void:
-	var result := chain.adjuster.get_full_adjust(point, _tolerance, _mode, _max_attempts, _align_segment_first)
+	var result := chain.adjuster._get_full_adjust_inner(point, _tolerance, _mode, _max_attempts, _backward_first, _forward_first, _align_segment_first)
 	chain.adjuster.apply(chain.segments, result.bases, result.positions)
 	_log_result(result.reached, point, result.positions[-1])
 

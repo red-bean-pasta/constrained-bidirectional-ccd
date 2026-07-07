@@ -99,7 +99,7 @@ func _draw_chain_adjustment_path(chain: BiCcdChain, point: Vector3) -> void:
 		return
 
 	print(label, ": Visualizing for chain ", chain.name)
-	var adjusts := _get_adjusts(chain, point)
+	var adjusts := _get_adjusts_to(chain, point)
 	assert(adjusts.size() > 0)
 	if adjusts[-1].positions.size() < 1:
 		push_error(label, ": Adjustments returned empty positions: Is the chain empty?")
@@ -129,44 +129,23 @@ func _ensure_environment() -> bool:
 		return false
 	return true
 
-func _get_adjusts(
+
+func _get_adjusts_to(
 	chain: BiCcdChain, 
 	point: Vector3,
 ) -> Array[BiCcdReachResult]:
-	var cache: Array[BiCcdReachResult] = []
-	var adjuster := chain.adjuster
-	var max_attempts := _max_attempts
-	
-	adjuster._placements.refresh()
-	
-	if _align_segment_first:
-		var result := adjuster.get_segments_forward_adjust_step(point, _tolerance, false)
-		cache.append(result.duplicate())
-		max_attempts -= 1
-		if result.reached:
-			return cache
-	
-	for i in max_attempts:
-		var backward := (
-			true 
-			if _mode == Mode.BACKWARD else 
-			false 
-			if _mode == Mode.FORWARD else 
-			(i + 1) % 2 == 1
-		) 
-		var result := (
-			adjuster.get_backward_adjust_step(point, _tolerance, false)
-			if backward else 
-			adjuster.get_forward_adjust_step(point, _tolerance, false)
-		)
-		cache.append(result.duplicate())
-		if result.reached:
-			break
-	
-	return cache
-	
+	return chain.adjuster._get_full_adjust_steps_inner(
+		point,
+		_tolerance,
+		_mode,
+		_max_attempts,
+		_backward_first,
+		_forward_first,
+		_align_segment_first
+	)
 
-func _create_graident_line_meshes(
+
+static func _create_graident_line_meshes(
 	adjusts: Array[BiCcdReachResult]
 ) -> Array[MeshInstance3D]:
 	var start_color := Color.GREEN
@@ -183,7 +162,7 @@ func _create_graident_line_meshes(
 	
 	return meshes
 
-func _create_line_mesh(
+static func _create_line_mesh(
 	positions: Array[Vector3],
 	color: Color = Color.RED,
 ) -> MeshInstance3D:
@@ -205,7 +184,7 @@ func _create_line_mesh(
 	return mesh
 	
 	
-func _ensure_group_in_scene() -> Node:
+static func _ensure_group_in_scene() -> Node:
 	var scene := EditorInterface.get_edited_scene_root()
 	var group := scene.find_child(group_name, false, true)
 	if group:
@@ -217,7 +196,7 @@ func _ensure_group_in_scene() -> Node:
 	group.owner = scene
 	return group
 
-func _add_lines_to_group(lines: Array[MeshInstance3D], group: Node) -> BiCcdAdjustVision:
+static func _add_lines_to_group(lines: Array[MeshInstance3D], group: Node) -> BiCcdAdjustVision:
 	var parent := BiCcdAdjustVision.new()
 	group.add_child(parent)
 	parent.owner = group.owner
@@ -228,7 +207,7 @@ func _add_lines_to_group(lines: Array[MeshInstance3D], group: Node) -> BiCcdAdju
 
 
 func _get_vision_name(chain: BiCcdChain, point: Vector3) -> String:
-	var mode_affix := "%s_%s" % [_mode, _align_segment_first]
+	var mode_affix := "%s_%s_%s_%s" % [_mode, _backward_first, _forward_first, _align_segment_first]
 	var point_mm := point * 1000
 	var point_affix := "%s_%s_%s" % [int(point_mm.x), int(point_mm.y), int(point_mm.z)]
 	return "%s_%s_%s" % [chain.name, mode_affix, point_affix]
