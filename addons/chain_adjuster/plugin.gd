@@ -13,7 +13,7 @@ var _max_attempt_input: SpinBox
 
 var _tolerance: float: 
 	get: return _tolerance_input.value
-var _mode: BiCcdAdjuster.CompleteFullAdjustMode:
+var _mode: BiCcdAdjuster.ExperimentFullAdjustMode:
 	get: return _mode_input.selected
 var _backward_first: bool:
 	get: return _backward_first_check.button_pressed
@@ -60,7 +60,7 @@ func _create_grid_container() -> GridContainer:
 	_mode_input = _add_enumed_option_button(
 		"Mode",
 		"Iteration mode",
-		BiCcdAdjuster.CompleteFullAdjustMode,
+		BiCcdAdjuster.ExperimentFullAdjustMode,
 		container
 	)
 	

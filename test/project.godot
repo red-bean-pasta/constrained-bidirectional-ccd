@@ -21,7 +21,7 @@ window/stretch/aspect="expand"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/rider-plugin/plugin.cfg")
+enabled=PackedStringArray("res://addons/chain_adjust_tool/plugin.cfg", "res://addons/rider-plugin/plugin.cfg")
 
 [physics]
 

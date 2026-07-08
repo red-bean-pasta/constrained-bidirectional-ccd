@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://b26n06nqw2dt8"]
+
+[ext_resource type="PackedScene" uid="uid://yttiks8sxu13" path="res://assets/lighting.tscn" id="1_h5k70"]
+[ext_resource type="PackedScene" uid="uid://c5tihnalrpkh7" path="res://models/leg.blend" id="2_h5k70"]
+
+[node name="Spider" type="Node3D" unique_id=726857537]
+
+[node name="Lighting" parent="." unique_id=401030968 instance=ExtResource("1_h5k70")]
+visible = false
+
+[node name="Leg" parent="." unique_id=618445971 instance=ExtResource("2_h5k70")]
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1200712388]
+transform = Transform3D(0.5181656, -0.3501072, 0.7803393, 0, 0.9123784, 0.4093479, -0.85528034, -0.21210998, 0.4727631, 1.6, 0.806, 0.152)
+visible = false
+current = true
+fov = 40.0
