@@ -124,16 +124,16 @@ enum FullAdjustMode {
 	BACKWARD_ONLY,
 	FORWARD_ONLY,
 	ALIGN_SEGMENT_FIRST_BACKWARD,
-	BACKWARD_ALIGNED_CYCLIC,
+	FORWARD_ALIGNED_CYCLIC,
 	BACKWARD_FIRST_FORWARD
 }
 
-static var mode_map: Dictionary[FullAdjustMode, CompleteFullAdjustMode] = {
-	FullAdjustMode.BACKWARD_ONLY : CompleteFullAdjustMode.BACKWARD_ONLY,
-	FullAdjustMode.FORWARD_ONLY : CompleteFullAdjustMode.FORWARD_ONLY,
-	FullAdjustMode.ALIGN_SEGMENT_FIRST_BACKWARD : CompleteFullAdjustMode.BACKWARD_ONLY,
-	FullAdjustMode.BACKWARD_ALIGNED_CYCLIC : CompleteFullAdjustMode.BACKWARD_ALIGNED_CYCLIC,
-	FullAdjustMode.BACKWARD_FIRST_FORWARD : CompleteFullAdjustMode.FORWARD_ONLY,
+static var mode_map: Dictionary[FullAdjustMode, ExperimentFullAdjustMode] = {
+	FullAdjustMode.BACKWARD_ONLY : ExperimentFullAdjustMode.BACKWARD_ONLY,
+	FullAdjustMode.FORWARD_ONLY : ExperimentFullAdjustMode.FORWARD_ONLY,
+	FullAdjustMode.ALIGN_SEGMENT_FIRST_BACKWARD : ExperimentFullAdjustMode.BACKWARD_ONLY,
+	FullAdjustMode.FORWARD_ALIGNED_CYCLIC : ExperimentFullAdjustMode.FORWARD_ALIGNED_CYCLIC,
+	FullAdjustMode.BACKWARD_FIRST_FORWARD : ExperimentFullAdjustMode.FORWARD_ONLY,
 }
 
 func get_full_adjust(
@@ -165,7 +165,7 @@ func get_full_adjust_local(
 	)
 
 
-enum CompleteFullAdjustMode{
+enum ExperimentFullAdjustMode{
 	BACKWARD_ONLY,
 	FORWARD_ONLY,
 	SIMPLE_CYCLIC,
@@ -177,7 +177,7 @@ enum CompleteFullAdjustMode{
 func _get_full_adjust_inner(
 	global_position: Vector3, 
 	tolerance: float,
-	mode: CompleteFullAdjustMode,
+	mode: ExperimentFullAdjustMode,
 	max_attempts: int = 10,
 	backward_first: bool = false,
 	forward_first: bool = false,
@@ -189,7 +189,7 @@ func _get_full_adjust_inner(
 func _get_full_adjust_local_inner(
 	local_position: Vector3, 
 	tolerance: float,
-	mode: CompleteFullAdjustMode,
+	mode: ExperimentFullAdjustMode,
 	max_attempts: int = 10,
 	backward_first: bool = false,
 	forward_first: bool = false,
@@ -201,7 +201,7 @@ func _get_full_adjust_local_inner(
 func _get_full_adjust_steps_inner(
 	global_position: Vector3, 
 	tolerance: float,
-	mode: CompleteFullAdjustMode,
+	mode: ExperimentFullAdjustMode,
 	max_attempts: int = 10,
 	backward_first: bool = false,
 	forward_first: bool = false,
@@ -213,7 +213,7 @@ func _get_full_adjust_steps_inner(
 func _get_full_adjust_steps_local_inner(
 	local_position: Vector3, 
 	tolerance: float,
-	mode: CompleteFullAdjustMode,
+	mode: ExperimentFullAdjustMode,
 	max_attempts: int = 10,
 	backward_first: bool = false,
 	forward_first: bool = false,
@@ -227,7 +227,7 @@ var _full_adjust_steps_cache: Array[BiCcdReachResult] = []
 func _get_full_adjust_local_base(
 	local_position: Vector3, 
 	tolerance: float,
-	mode: CompleteFullAdjustMode,
+	mode: ExperimentFullAdjustMode,
 	max_attempts: int = 10,
 	backward_first: bool = false,
 	forward_first: bool = false,
@@ -262,15 +262,15 @@ func _get_full_adjust_local_base(
 		if reached:
 			return _full_adjust_steps_cache.duplicate() if steps else _get_result(true)
 	
-	var backward_only := mode == CompleteFullAdjustMode.BACKWARD_ONLY
-	var forward_only := mode == CompleteFullAdjustMode.FORWARD_ONLY
+	var backward_only := mode == ExperimentFullAdjustMode.BACKWARD_ONLY
+	var forward_only := mode == ExperimentFullAdjustMode.FORWARD_ONLY
 	var align_forward := (
-		mode == CompleteFullAdjustMode.FORWARD_ALIGNED_CYCLIC
-		or mode == CompleteFullAdjustMode.BOTH_ALIGNED_CYCLIC
+		mode == ExperimentFullAdjustMode.FORWARD_ALIGNED_CYCLIC
+		or mode == ExperimentFullAdjustMode.BOTH_ALIGNED_CYCLIC
 	)
 	var align_backward := (
-		mode == CompleteFullAdjustMode.BACKWARD_ALIGNED_CYCLIC
-		or mode == CompleteFullAdjustMode.BOTH_ALIGNED_CYCLIC
+		mode == ExperimentFullAdjustMode.BACKWARD_ALIGNED_CYCLIC
+		or mode == ExperimentFullAdjustMode.BOTH_ALIGNED_CYCLIC
 	)
 	for i in max_attempts:
 		var backward := (
