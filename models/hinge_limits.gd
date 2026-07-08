@@ -41,6 +41,13 @@ static func create_from_deg(
 		deg_to_rad(p_max_deg),
 		deg_to_rad(p_rest_deg),
 	)
+
+static func create_unrotatable(p_rest_rad: float) -> BiCcdHingeLimits:
+	return BiCcdHingeLimits.new(p_rest_rad, p_rest_rad, p_rest_rad)
+
+static func create_unrotatable_from_deg(p_rest_deg: float) -> BiCcdHingeLimits:
+	return create_from_deg(p_rest_deg, p_rest_deg, p_rest_deg)
+	
 	
 func clamp(rad: float) -> float:
 	return BiCcdUtils.wrap_clamp_rad(rad, min_rad, max_rad)
