@@ -26,9 +26,11 @@ func _init(
 	p_max_rad: float,
 	p_rest_rad: float = NAN,
 ) -> void:
+	assert(not is_nan(p_min_rad) and not is_nan(p_max_rad))
+	assert(p_min_rad <= p_max_rad)
 	min_rad = p_min_rad
 	max_rad = p_max_rad
-	rest_rad = p_rest_rad
+	rest_rad = p_rest_rad if not is_nan(p_rest_rad) else (p_min_rad + p_max_rad) * 0.5
 	BiCcdUtils.assert_range(rest_rad, min_rad, max_rad)
 	
 static func create_from_deg(

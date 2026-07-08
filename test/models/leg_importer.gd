@@ -11,45 +11,14 @@ enum Segment {
 	TARSUS
 }
 
-class JointSpec:
-	var min_flex_degree: float
-	var max_flex_degree: float
-	var rest_flex_degree: float
-	var min_yaw_degree: float
-	var max_yaw_degree: float
-	var rest_yaw_degree: float
-	
-	func _init(
-		p_min_flex_deg: float,
-		p_max_flex_deg: float,
-		p_rest_flex_deg: float = NAN,
-		p_yaw_deg: float = 0.0,
-	) -> void:
-		min_flex_degree = p_min_flex_deg
-		max_flex_degree = p_max_flex_deg
-		rest_flex_degree = (p_min_flex_deg + p_max_flex_deg) * 0.5 if is_nan(p_rest_flex_deg) else p_rest_flex_deg
-		assert(min_flex_degree <= rest_flex_degree and rest_flex_degree <= max_flex_degree)
-		
-		assert(p_yaw_deg >= 0.0)
-		min_yaw_degree = -p_yaw_deg
-		max_yaw_degree = p_yaw_deg
-		rest_yaw_degree = 0.0
-		
-	static func create_inflexible(
-		flex_deg: float,
-		yaw_deg: float = 0.0
-	) -> JointSpec:
-		return JointSpec.new(flex_deg, flex_deg, flex_deg, yaw_deg)
-	
-
-static var segment_spec: Dictionary[Segment, JointSpec] = {
-	Segment.COXA: JointSpec.new(140, 220, 180, 15),
-	Segment.TROCHANTER: JointSpec.create_inflexible(180, 25),
-	Segment.FEMUR: JointSpec.new(215, 270, 250),
-	Segment.PATELLA: JointSpec.new(30, 160, 50),
-	Segment.METATARSUS: JointSpec.new(95, 175, 115),
-	Segment.TIBIA: JointSpec.create_inflexible(190),
-	Segment.TARSUS: JointSpec.create_inflexible(172, 20)
+static var segment_spec: Dictionary[Segment, BiCcdJointSpec] = {
+	Segment.COXA: BiCcdJointSpec.create_symmetrical_yawable(15, 140, 220, 180),
+	Segment.TROCHANTER: BiCcdJointSpec.create_symmetrical_yawable_inflexible(25, 180),
+	Segment.FEMUR: BiCcdJointSpec.create_unyawable(0, 215, 270, 250),
+	Segment.PATELLA: BiCcdJointSpec.create_unyawable(0, 30, 160, 50),
+	Segment.METATARSUS: BiCcdJointSpec.create_unyawable(0, 95, 175, 115),
+	Segment.TIBIA: BiCcdJointSpec.create_inflexible_unyawable(190, 0),
+	Segment.TARSUS: BiCcdJointSpec.create_symmetrical_yawable_inflexible(20, 172)
 }
 
 
@@ -78,13 +47,7 @@ func _mesh_to_segment(node: Node) -> void:
 	var seg := node as BiCcdSegment
 	
 	seg.index = value
-	
-	seg._min_flex_degree = spec.min_flex_degree
-	seg._max_flex_degree = spec.max_flex_degree
-	seg._rest_flex_degree = spec.rest_flex_degree
-	seg._min_yaw_degree = spec.min_yaw_degree
-	seg._max_yaw_degree = spec.max_yaw_degree
-	seg._rest_yaw_degree = spec.rest_yaw_degree
+	spec.apply_to_segment(seg)
 	
 func _sort_segments(root: Node) -> void:
 	var ordered: Array[BiCcdSegment] = []
