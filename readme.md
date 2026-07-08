@@ -54,6 +54,12 @@ The visualizer draws one path per iteration, not one path per segment per iterat
 
 The plugins should offer a convenient interface to experiment with and compare CCD variants, as well as set the start state of chains. 
 
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td width="33%"><img src="doc/plugin_panel.png" width="100%"></td>
+    <td width="67%"><img src="doc/plugin_demo.webp" width="100%"></td>
+  </tr>
+</table>
 
 ## Solving
 This project tests some CCD variants. The sample size is small and the test chain is heavily constrained. The results were consistent and explainable enough but need further experiments. 
@@ -76,6 +82,9 @@ Besides causing more "damage", proximal joints also contributes more. The same r
 Because of this, each joint's alignment affects the effector position later adjustments see, which explains why distal-first and proximal-first sweeps produce very different results, despite they sounds like mirrored processes.
 
 ### Tested modes
+
+![Comparison](doc/variants_comparison.png)
+
 #### Backward only
 Baseline mode. Works as expected. The paths are gradual and nartual. Polarized rotation can often be seen on distal joints.
 
