@@ -2,7 +2,8 @@
 extends Node3D
 class_name BiCcdChain
 
-@export var segments: Array[BiCcdSegment]
+#@export # Maybe a bug in Godot engine. See issue #105002
+var segments: Array[BiCcdSegment]
 
 var adjuster: BiCcdAdjuster
 
